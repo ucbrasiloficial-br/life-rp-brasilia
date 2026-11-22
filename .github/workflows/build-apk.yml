@@ -10,6 +10,18 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
 
+      - name: Localizar pasta do projeto (package.json)
+        run: |
+          ls -la
+          PKG_PATH=$(find . -maxdepth 3 -name "package.json" -not -path "*/.*" | head -n 1)
+          echo "Encontrado package.json em: $PKG_PATH"
+          if [ -z "$PKG_PATH" ]; then
+            echo "ERRO: package.json não encontrado no repositório!"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$PKG_PATH")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,6 +46,7 @@ jobs:
 
       - name: Instalar dependências e buildar Web/Capacitor
         run: |
+          cd "$PROJECT_DIR"
           npm install
           npm run build
           npx cap add android
@@ -41,7 +54,7 @@ jobs:
 
       - name: Compilar APK Debug
         run: |
-          cd android
+          cd "$PROJECT_DIR/android"
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
@@ -49,5 +62,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LIFE-RP-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+          path: ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
